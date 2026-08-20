@@ -1,0 +1,11 @@
+# 목표: 관절을 목표 각도까지 이동
+string  joint_name
+float64 target_position
+---
+# 결과: 최종 도달 각도와 소요 시간
+float64 final_position
+float64 elapsed_sec
+---
+# 피드백: 진행 중 현재 각도
+float64 current_position
+float64 progress_ratio

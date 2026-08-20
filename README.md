@@ -23,9 +23,11 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-## 3장 예제 실행
+## 디렉터리 이름 규칙
 
-현재 구현된 예제는 `ch03/hello_ros2`입니다.
+장별 폴더는 `chNN/`, 장 안의 예제는 `NN-패키지이름` 형식입니다. 번호는 원고에 나오는 순서를 나타내며 패키지 이름 자체에는 들어가지 않습니다. colcon은 `package.xml`로 패키지를 찾으므로 빌드·실행 명령에는 번호 없는 이름을 씁니다. 자세한 규칙은 `AGENT.md`를 참고합니다.
+
+## 3장 예제 실행
 
 ```bash
 cd ~/ros2_ws
@@ -38,13 +40,35 @@ ros2 run hello_ros2 blocking_callback_node multi_same_group
 ros2 run hello_ros2 blocking_callback_node multi_separate_groups
 ```
 
+## 4장 예제 실행
+
+```bash
+cd ~/ros2_ws
+colcon build --symlink-install --packages-select robot_interfaces sensor_nodes
+source install/setup.bash
+
+ros2 run sensor_nodes camera_node best_effort
+ros2 run sensor_nodes joint_state_relay
+```
+
+## 5장 예제 실행
+
+```bash
+cd ~/ros2_ws
+colcon build --symlink-install --packages-select ops_demo
+source install/setup.bash
+
+ros2 launch ops_demo ops_demo.launch.py
+ros2 launch ops_demo ops_demo.launch.py log_level:=debug
+```
+
 ## 장별 구성
 
 | 장 | 디렉터리 | 내용 | 상태 |
 |---|---|---|---|
-| 3장 | `ch03/` | ROS2 개발 환경과 노드·실행 모델 | 구현 |
-| 4장 | `ch04/` | 통신과 인터페이스 설계 | 예정 |
-| 5장 | `ch05/` | 시스템 운영 도구 | 예정 |
+| 3장 | `ch03/01-hello_ros2` | ROS2 개발 환경과 노드·실행 모델 | 구현 |
+| 4장 | `ch04/01-robot_interfaces`, `ch04/02-sensor_nodes` | 통신과 인터페이스 설계 | 구현 |
+| 5장 | `ch05/01-ops_demo` | 시스템 운영 도구 | 구현 |
 | 6장 | `ch06/` | 테스트·미들웨어 튜닝·보안 | 예정 |
 | 7장 | `ch07/` | URDF·TF와 UR5e 모델링 | 예정 |
 | 8장 | `ch08/` | ros2_control과 C++ 하드웨어 인터페이스 | 예정 |
