@@ -1,0 +1,6 @@
+# 요청: 그리퍼 개폐 폭
+float64 width      # 목표 폭(m)
+---
+# 응답: 처리 결과
+bool    success
+string  message

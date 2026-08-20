@@ -1,0 +1,13 @@
+# 노드별 파라미터 값
+# 최상위 키는 노드 이름, ros__parameters 아래에 파라미터를 나열
+
+sensor_sim:
+  ros__parameters:
+    publish_rate_hz: 5.0
+    base_temperature: 40.0
+    frame_id: "motor_case"
+
+temperature_monitor:
+  ros__parameters:
+    warn_threshold: 55.0
+    error_threshold: 70.0
