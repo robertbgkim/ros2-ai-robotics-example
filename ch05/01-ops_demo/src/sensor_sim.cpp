@@ -1,3 +1,6 @@
+// Copyright 2026 makepluscode
+// SPDX-License-Identifier: Apache-2.0
+
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -36,9 +39,15 @@ public:
       throw std::invalid_argument("publish_rate_hz는 0보다 큰 유한한 값이어야 합니다");
     }
 
-    // 5. 파라미터로 받은 주기를 나노초 단위로 환산해 타이머 등록
+    // 5. 파라미터로 받은 주기를 나노초 단위로 환산
     const auto period = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(1.0 / rate_hz));
+
+    // 6. 환산 결과가 타이머 주기로 성립하는지 확인
+    if (period <= std::chrono::nanoseconds::zero()) {
+      throw std::invalid_argument("publish_rate_hz가 너무 커서 주기가 0이 됩니다");
+    }
+    // 7. 타이머 등록
     timer_ = this->create_wall_timer(period, std::bind(&SensorSim::on_timer, this));
 
     RCLCPP_INFO(

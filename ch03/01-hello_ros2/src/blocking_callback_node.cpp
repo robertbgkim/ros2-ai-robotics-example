@@ -1,5 +1,10 @@
+// Copyright 2026 makepluscode
+// SPDX-License-Identifier: Apache-2.0
+
 #include <chrono>
+#include <cinttypes>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -40,8 +45,8 @@ private:
 
       // 2. 간격 로그 출력
       RCLCPP_INFO(
-          this->get_logger(), "fast tick #%zu (간격 %lldms)",
-          fast_count_, static_cast<long long>(gap_ms));
+          this->get_logger(), "fast tick #%zu (간격 %" PRId64 "ms)",
+          fast_count_, static_cast<int64_t>(gap_ms));
     }
 
     // 3. 다음 호출을 위한 상태 갱신

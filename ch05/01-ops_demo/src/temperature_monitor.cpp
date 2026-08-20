@@ -1,9 +1,16 @@
+// Copyright 2026 makepluscode
+// SPDX-License-Identifier: Apache-2.0
+
 #include <chrono>
+#include <cmath>
 #include <functional>
+#include <stdexcept>
+#include <vector>
 #include <memory>
 #include <string>
 
 #include "diagnostic_updater/diagnostic_updater.hpp"
+#include "rcl_interfaces/msg/set_parameters_result.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/temperature.hpp"
 
@@ -25,7 +32,20 @@ public:
         "/motor_temperature", 10,
         std::bind(&TemperatureMonitor::on_temperature, this, std::placeholders::_1));
 
-    // 3. 진단 갱신기 구성과 진단 항목 등록
+    // 3. 파라미터 변경을 받아들이기 전에 검증
+    parameter_callback_ = this->add_on_set_parameters_callback(
+      std::bind(&TemperatureMonitor::on_set_parameters, this, std::placeholders::_1));
+
+    // 4. 초기 설정이 이미 잘못돼 있으면 즉시 중단
+    if (!is_valid_pair(
+        this->get_parameter("warn_threshold").as_double(),
+        this->get_parameter("error_threshold").as_double()))
+    {
+      throw std::invalid_argument(
+        "warn_threshold는 error_threshold보다 작은 유한한 값이어야 합니다");
+    }
+
+    // 5. 진단 갱신기 구성과 진단 항목 등록
     updater_ = std::make_shared<diagnostic_updater::Updater>(this);
     updater_->setHardwareID("motor_case");
     updater_->add("모터 온도", this, &TemperatureMonitor::diagnose);
@@ -34,14 +54,49 @@ public:
   }
 
 private:
+  // 두 임계값이 유한하고 순서가 맞는지 확인
+  static bool is_valid_pair(double warn, double error)
+  {
+    return std::isfinite(warn) && std::isfinite(error) && warn < error;
+  }
+
+  rcl_interfaces::msg::SetParametersResult on_set_parameters(
+    const std::vector<rclcpp::Parameter> & parameters)
+  {
+    // 1. 변경 후에 적용될 값을 미리 계산
+    double warn = this->get_parameter("warn_threshold").as_double();
+    double error = this->get_parameter("error_threshold").as_double();
+    for (const auto & parameter : parameters) {
+      if (parameter.get_name() == "warn_threshold") {
+        warn = parameter.as_double();
+      } else if (parameter.get_name() == "error_threshold") {
+        error = parameter.as_double();
+      }
+    }
+
+    // 2. 관계가 깨지는 조합이면 적용 전에 거부
+    rcl_interfaces::msg::SetParametersResult result;
+    result.successful = is_valid_pair(warn, error);
+    if (!result.successful) {
+      result.reason = "warn_threshold는 error_threshold보다 작은 유한한 값이어야 합니다";
+    }
+    return result;
+  }
+
   void on_temperature(const sensor_msgs::msg::Temperature::SharedPtr msg)
   {
-    // 1. 최신 온도와 수신 시각 보관
+    // 1. 유한하지 않은 값은 받아들이지 않음
+    if (!std::isfinite(msg->temperature)) {
+      RCLCPP_WARN(this->get_logger(), "유한하지 않은 온도 수신");
+      return;
+    }
+
+    // 2. 최신 온도와 수신 시각 보관
     last_temperature_ = msg->temperature;
     last_receive_time_ = std::chrono::steady_clock::now();
     received_ = true;
 
-    // 2. 매 건은 디버그 레벨로만 기록
+    // 3. 매 건은 디버그 레벨로만 기록
     RCLCPP_DEBUG(this->get_logger(), "온도 %.1f도 수신", last_temperature_);
   }
 
@@ -51,8 +106,8 @@ private:
     const double warn = this->get_parameter("warn_threshold").as_double();
     const double error = this->get_parameter("error_threshold").as_double();
 
-    // 2. 임계값 순서가 뒤집혀 있으면 판정 불가
-    if (warn >= error) {
+    // 2. 파라미터 콜백을 우회한 값이 남아 있을 수 있으므로 방어적으로 재확인
+    if (!is_valid_pair(warn, error)) {
       status.summary(
           diagnostic_msgs::msg::DiagnosticStatus::ERROR, "임계값 설정 오류");
       status.add("경고 임계값", warn);
@@ -92,6 +147,7 @@ private:
 
   rclcpp::Subscription<sensor_msgs::msg::Temperature>::SharedPtr subscription_;
   std::shared_ptr<diagnostic_updater::Updater> updater_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_;
   double last_temperature_;
   std::chrono::steady_clock::time_point last_receive_time_;
   bool received_;

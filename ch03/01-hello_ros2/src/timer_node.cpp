@@ -1,3 +1,6 @@
+// Copyright 2026 makepluscode
+// SPDX-License-Identifier: Apache-2.0
+
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -9,7 +12,8 @@ using namespace std::chrono_literals;
 class TimerNode : public rclcpp::Node
 {
 public:
-  TimerNode() : Node("timer_node"), count_(0)
+  TimerNode()
+  : Node("timer_node"), count_(0)
   {
     // 1. 500ms 주기 타이머 콜백 등록
     timer_ = this->create_wall_timer(

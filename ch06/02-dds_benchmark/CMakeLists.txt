@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(sensor_nodes)
+project(dds_benchmark)
 
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
@@ -7,23 +7,23 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(robot_interfaces REQUIRED)
+find_package(rmw REQUIRED)
+find_package(std_msgs REQUIRED)
 
-add_executable(camera_node src/camera_node.cpp)
-target_link_libraries(camera_node PRIVATE
+add_executable(latency_ping src/latency_ping.cpp)
+target_link_libraries(latency_ping PRIVATE
   rclcpp::rclcpp
-  ${sensor_msgs_TARGETS})
+  rmw::rmw
+  ${std_msgs_TARGETS})
 
-add_executable(joint_state_relay src/joint_state_relay.cpp)
-target_link_libraries(joint_state_relay PRIVATE
+add_executable(latency_pong src/latency_pong.cpp)
+target_link_libraries(latency_pong PRIVATE
   rclcpp::rclcpp
-  ${sensor_msgs_TARGETS}
-  ${robot_interfaces_TARGETS})
+  ${std_msgs_TARGETS})
 
 install(TARGETS
-  camera_node
-  joint_state_relay
+  latency_ping
+  latency_pong
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

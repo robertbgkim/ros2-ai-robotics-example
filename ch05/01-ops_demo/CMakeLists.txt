@@ -34,6 +34,9 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
+  # SPDX 한 줄 표기를 쓰므로 라이선스 전문을 요구하는 copyright 린터는 제외
+  set(ament_cmake_copyright_FOUND TRUE)
+
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 endif()

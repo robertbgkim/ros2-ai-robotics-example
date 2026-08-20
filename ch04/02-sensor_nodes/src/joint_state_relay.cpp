@@ -1,3 +1,7 @@
+// Copyright 2026 makepluscode
+// SPDX-License-Identifier: Apache-2.0
+
+#include <cmath>
 #include <functional>
 #include <memory>
 #include <string>
@@ -31,8 +35,9 @@ public:
     // 4. 그리퍼 폭 설정 서비스 서버 생성
     service_ = this->create_service<robot_interfaces::srv::SetGripper>(
         "/set_gripper",
-        std::bind(&JointStateRelay::on_set_gripper, this,
-                  std::placeholders::_1, std::placeholders::_2));
+        std::bind(
+            &JointStateRelay::on_set_gripper, this,
+            std::placeholders::_1, std::placeholders::_2));
 
     RCLCPP_INFO(this->get_logger(), "관절 상태 릴레이 시작");
   }
@@ -61,13 +66,16 @@ private:
   }
 
   void on_set_gripper(
-      const std::shared_ptr<robot_interfaces::srv::SetGripper::Request> request,
-      std::shared_ptr<robot_interfaces::srv::SetGripper::Response> response)
+    const std::shared_ptr<robot_interfaces::srv::SetGripper::Request> request,
+    std::shared_ptr<robot_interfaces::srv::SetGripper::Response> response)
   {
     // 1. 물리적으로 가능한 범위 검사
-    if (request->width < 0.0 || request->width > 0.085) {
+    //    NaN은 모든 비교가 거짓이므로 유한성부터 확인
+    if (!std::isfinite(request->width) ||
+      request->width < 0.0 || request->width > 0.085)
+    {
       response->success = false;
-      response->message = "그리퍼 폭은 0.0에서 0.085 사이여야 합니다";
+      response->message = "그리퍼 폭은 0.0에서 0.085 사이의 유한한 값이어야 합니다";
       RCLCPP_WARN(this->get_logger(), "그리퍼 폭 %.3f 거부", request->width);
       return;
     }

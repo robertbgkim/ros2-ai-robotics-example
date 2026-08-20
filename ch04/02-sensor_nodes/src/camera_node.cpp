@@ -1,3 +1,6 @@
+// Copyright 2026 makepluscode
+// SPDX-License-Identifier: Apache-2.0
+
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
