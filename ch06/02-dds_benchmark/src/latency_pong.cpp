@@ -26,7 +26,9 @@ public:
     subscription_ = this->create_subscription<std_msgs::msg::UInt64>(
         "/ping", qos, std::bind(&LatencyPong::on_ping, this, std::placeholders::_1));
 
-    RCLCPP_INFO(this->get_logger(), "지연 측정 반환 노드 시작");
+    RCLCPP_INFO(
+        this->get_logger(), "지연 측정 반환 노드 시작 (RMW=%s)",
+        rmw_get_implementation_identifier());
   }
 
 private:

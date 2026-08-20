@@ -3,10 +3,10 @@
 
 #include <gtest/gtest.h>
 
-#include "comm_tests/temperature_grade.hpp"
+#include "ops_demo/temperature_grade.hpp"
 
-using comm_tests::Grade;
-using comm_tests::grade_temperature;
+using ops_demo::Grade;
+using ops_demo::grade_temperature;
 
 // 임계값 아래는 정상
 TEST(TemperatureGrade, BelowWarnIsOk)

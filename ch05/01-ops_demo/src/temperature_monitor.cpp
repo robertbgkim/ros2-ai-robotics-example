@@ -10,6 +10,7 @@
 #include <string>
 
 #include "diagnostic_updater/diagnostic_updater.hpp"
+#include "ops_demo/temperature_grade.hpp"
 #include "rcl_interfaces/msg/set_parameters_result.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/temperature.hpp"
@@ -106,23 +107,14 @@ private:
     const double warn = this->get_parameter("warn_threshold").as_double();
     const double error = this->get_parameter("error_threshold").as_double();
 
-    // 2. 파라미터 콜백을 우회한 값이 남아 있을 수 있으므로 방어적으로 재확인
-    if (!is_valid_pair(warn, error)) {
-      status.summary(
-          diagnostic_msgs::msg::DiagnosticStatus::ERROR, "임계값 설정 오류");
-      status.add("경고 임계값", warn);
-      status.add("오류 임계값", error);
-      return;
-    }
-
-    // 3. 아직 수신 전이면 판정 보류
+    // 2. 아직 수신 전이면 판정 보류
     if (!received_) {
       status.summary(
           diagnostic_msgs::msg::DiagnosticStatus::WARN, "온도 데이터 수신 전");
       return;
     }
 
-    // 4. 마지막 수신 이후 시간이 지나치게 벌어지면 단절로 판정
+    // 3. 마지막 수신 이후 시간이 지나치게 벌어지면 단절로 판정
     if (std::chrono::steady_clock::now() - last_receive_time_ > 2s) {
       status.summary(
           diagnostic_msgs::msg::DiagnosticStatus::ERROR, "온도 데이터 수신 중단");
@@ -130,16 +122,23 @@ private:
       return;
     }
 
-    // 5. 임계값과 비교해 등급 결정
-    if (last_temperature_ >= error) {
-      status.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "온도 상한 초과");
-    } else if (last_temperature_ >= warn) {
-      status.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "온도 경고 구간");
-    } else {
-      status.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "온도 정상");
+    // 4. 등급 판정은 ROS2에 의존하지 않는 순수 함수에 맡김
+    switch (ops_demo::grade_temperature(last_temperature_, warn, error)) {
+      case ops_demo::Grade::Error:
+        status.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "온도 상한 초과");
+        break;
+      case ops_demo::Grade::Warn:
+        status.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "온도 경고 구간");
+        break;
+      case ops_demo::Grade::Ok:
+        status.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "온도 정상");
+        break;
+      case ops_demo::Grade::InvalidThreshold:
+        status.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "임계값 설정 오류");
+        break;
     }
 
-    // 6. 판정 근거가 된 값을 함께 실어 보냄
+    // 5. 판정 근거가 된 값을 함께 실어 보냄
     status.add("현재 온도", last_temperature_);
     status.add("경고 임계값", warn);
     status.add("오류 임계값", error);

@@ -1,6 +1,7 @@
 # Copyright 2026 makepluscode
 # SPDX-License-Identifier: Apache-2.0
 
+import time
 import unittest
 
 import launch
@@ -53,23 +54,22 @@ class TestEchoNode(unittest.TestCase):
     def test_prefix_is_applied(self):
         # 1. 양방향 매칭이 끝날 때까지 대기
         #    디스커버리는 비동기라 한쪽만 확인하면 첫 발행을 놓칠 수 있음
-        end = self.node.get_clock().now().nanoseconds + 10_000_000_000
+        #    ROS 시간은 시뮬레이션 시각으로 바뀔 수 있으므로 단조 시계를 씀
+        end = time.monotonic_ns() + 10_000_000_000
         while (self.publisher.get_subscription_count() == 0
                or self.subscription.get_publisher_count() == 0):
             rclpy.spin_once(self.node, timeout_sec=0.1)
-            self.assertLess(
-                self.node.get_clock().now().nanoseconds, end, '에코 노드와 매칭되지 않음')
+            self.assertLess(time.monotonic_ns(), end, '에코 노드와 매칭되지 않음')
 
         # 2. 응답이 올 때까지 되풀이해 발행
         #    매칭 직후에도 첫 건이 유실될 수 있으므로 한 번만 보내지 않음
         message = String()
         message.data = 'hello'
-        end = self.node.get_clock().now().nanoseconds + 10_000_000_000
+        end = time.monotonic_ns() + 10_000_000_000
         while not self.received:
             self.publisher.publish(message)
             rclpy.spin_once(self.node, timeout_sec=0.2)
-            self.assertLess(
-                self.node.get_clock().now().nanoseconds, end, '응답을 받지 못함')
+            self.assertLess(time.monotonic_ns(), end, '응답을 받지 못함')
 
         # 3. 접두사가 붙었는지 확인
         self.assertEqual(self.received[0], 'test: hello')
