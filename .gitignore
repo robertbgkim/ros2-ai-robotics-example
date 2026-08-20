@@ -1,0 +1,10 @@
+# ROS 2 workspace outputs
+build/
+install/
+log/
+
+# Editors and local files
+.vscode/
+.idea/
+*.swp
+*~

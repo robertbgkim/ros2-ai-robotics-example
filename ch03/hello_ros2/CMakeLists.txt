@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(hello_ros2)
 
 if(NOT CMAKE_CXX_STANDARD)
@@ -9,10 +9,10 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 
 add_executable(timer_node src/timer_node.cpp)
-ament_target_dependencies(timer_node rclcpp)
+target_link_libraries(timer_node PRIVATE rclcpp::rclcpp)
 
 add_executable(blocking_callback_node src/blocking_callback_node.cpp)
-ament_target_dependencies(blocking_callback_node rclcpp)
+target_link_libraries(blocking_callback_node PRIVATE rclcpp::rclcpp)
 
 install(TARGETS
   timer_node
