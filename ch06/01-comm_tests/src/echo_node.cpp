@@ -37,13 +37,13 @@ public:
     // 3. 요청 구독자 생성
     subscription_ = this->create_subscription<std_msgs::msg::String>(
       "/echo_in", 10,
-      [this](std_msgs::msg::String::ConstSharedPtr msg) {on_input(msg);});
+      [this](const std_msgs::msg::String::ConstSharedPtr & msg) {on_input(msg);});
 
     RCLCPP_INFO(this->get_logger(), "에코 노드 시작 (접두사=%s)", prefix_.c_str());
   }
 
 private:
-  void on_input(std_msgs::msg::String::ConstSharedPtr msg)
+  void on_input(const std_msgs::msg::String::ConstSharedPtr & msg)
   {
     // 1. 접두사를 붙인 응답 구성
     std_msgs::msg::String out;

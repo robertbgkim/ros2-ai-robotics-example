@@ -54,7 +54,7 @@ public:
     publisher_ = this->create_publisher<std_msgs::msg::UInt64>("/ping", qos);
     subscription_ = this->create_subscription<std_msgs::msg::UInt64>(
       "/pong", qos,
-      [this](std_msgs::msg::UInt64::ConstSharedPtr msg) {on_pong(msg);});
+      [this](const std_msgs::msg::UInt64::ConstSharedPtr & msg) {on_pong(msg);});
 
     // 4. 1ms 간격으로 한 건씩 발행
     timer_ = this->create_wall_timer(1ms, [this]() {on_timer();});
@@ -80,7 +80,7 @@ private:
     publisher_->publish(msg);
   }
 
-  void on_pong(std_msgs::msg::UInt64::ConstSharedPtr msg)
+  void on_pong(const std_msgs::msg::UInt64::ConstSharedPtr & msg)
   {
     // 1. 이미 필요한 표본을 다 모았으면 무시
     if (samples_.size() >= sample_count_) {

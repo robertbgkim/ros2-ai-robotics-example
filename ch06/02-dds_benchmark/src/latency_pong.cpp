@@ -37,7 +37,7 @@ public:
     // 3. 요청 구독자 생성
     subscription_ = this->create_subscription<std_msgs::msg::UInt64>(
       "/ping", qos,
-      [this](std_msgs::msg::UInt64::ConstSharedPtr msg) {on_ping(msg);});
+      [this](const std_msgs::msg::UInt64::ConstSharedPtr & msg) {on_ping(msg);});
 
     RCLCPP_INFO(
       this->get_logger(), "지연 측정 반환 노드 시작 (RMW=%s)",
@@ -45,7 +45,7 @@ public:
   }
 
 private:
-  void on_ping(std_msgs::msg::UInt64::ConstSharedPtr msg)
+  void on_ping(const std_msgs::msg::UInt64::ConstSharedPtr & msg)
   {
     // 1. 받은 값을 그대로 되돌려 보냄
     publisher_->publish(*msg);
