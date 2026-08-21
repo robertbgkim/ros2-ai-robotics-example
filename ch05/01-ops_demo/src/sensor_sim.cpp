@@ -1,10 +1,21 @@
 // Copyright 2026 makepluscode
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <chrono>
 #include <cmath>
 #include <cstddef>
-#include <functional>
+#include <exception>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -12,14 +23,12 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/temperature.hpp"
 
-using namespace std::chrono_literals;
-
 // 파라미터로 발행 주기와 기준 온도를 받아 온도 값을 발행하는 모의 센서 노드
 class SensorSim : public rclcpp::Node
 {
 public:
   SensorSim()
-  : Node("sensor_sim"), tick_(0)
+  : Node("sensor_sim")
   {
     // 1. 파라미터 선언과 기본값 지정
     this->declare_parameter<double>("publish_rate_hz", 5.0);
@@ -31,28 +40,33 @@ public:
     base_temperature_ = this->get_parameter("base_temperature").as_double();
     frame_id_ = this->get_parameter("frame_id").as_string();
 
-    // 3. 온도 발행자 생성
-    publisher_ = this->create_publisher<sensor_msgs::msg::Temperature>("/motor_temperature", 10);
-
-    // 4. 주기 값이 타이머로 쓸 수 있는 범위인지 검사
+    // 3. 주기와 메시지 메타데이터 파라미터 검증
     if (!std::isfinite(rate_hz) || rate_hz <= 0.0) {
       throw std::invalid_argument("publish_rate_hz는 0보다 큰 유한한 값이어야 합니다");
     }
+    if (!std::isfinite(base_temperature_)) {
+      throw std::invalid_argument("base_temperature는 유한한 값이어야 합니다");
+    }
+    if (frame_id_.empty()) {
+      throw std::invalid_argument("frame_id는 비어 있지 않아야 합니다");
+    }
 
-    // 5. 파라미터로 받은 주기를 나노초 단위로 환산
+    // 4. 파라미터로 받은 주기를 나노초 단위로 환산
     const auto period = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::duration<double>(1.0 / rate_hz));
+      std::chrono::duration<double>(1.0 / rate_hz));
 
-    // 6. 환산 결과가 타이머 주기로 성립하는지 확인
+    // 5. 환산 결과가 타이머 주기로 유효한지 확인
     if (period <= std::chrono::nanoseconds::zero()) {
       throw std::invalid_argument("publish_rate_hz가 너무 커서 주기가 0이 됩니다");
     }
-    // 7. 타이머 등록
-    timer_ = this->create_wall_timer(period, std::bind(&SensorSim::on_timer, this));
+
+    // 6. 검증이 끝난 뒤 발행자와 타이머 생성
+    publisher_ = this->create_publisher<sensor_msgs::msg::Temperature>("/motor_temperature", 10);
+    timer_ = this->create_wall_timer(period, [this]() {on_timer();});
 
     RCLCPP_INFO(
-        this->get_logger(), "모의 센서 시작 (주기=%.1fHz, 기준 온도=%.1f도, 프레임=%s)",
-        rate_hz, base_temperature_, frame_id_.c_str());
+      this->get_logger(), "모의 센서 시작 (주기=%.1fHz, 기준 온도=%.1f도, 프레임=%s)",
+      rate_hz, base_temperature_, frame_id_.c_str());
   }
 
 private:
@@ -68,19 +82,19 @@ private:
     msg.temperature = temperature;
     msg.variance = 0.0;
 
-    // 3. 발행 후 틱 누적
+    // 3. 발행 후 순번 누적
     publisher_->publish(msg);
-    tick_++;
+    ++tick_;
 
-    // 4. 디버그 레벨 로그로 매 건 기록
+    // 4. 매 건은 디버그 레벨 로그로만 기록
     RCLCPP_DEBUG(this->get_logger(), "온도 %.1f도 발행", temperature);
   }
 
   rclcpp::Publisher<sensor_msgs::msg::Temperature>::SharedPtr publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
-  double base_temperature_;
+  double base_temperature_{0.0};
   std::string frame_id_;
-  std::size_t tick_;
+  std::size_t tick_{0};
 };
 
 int main(int argc, char * argv[])
@@ -88,10 +102,16 @@ int main(int argc, char * argv[])
   // 1. rclcpp 컨텍스트 초기화
   rclcpp::init(argc, argv);
 
-  // 2. 모의 센서 노드 실행
-  rclcpp::spin(std::make_shared<SensorSim>());
+  int exit_code = 0;
+  try {
+    // 2. 모의 센서 노드 실행
+    rclcpp::spin(std::make_shared<SensorSim>());
+  } catch (const std::exception & error) {
+    RCLCPP_FATAL(rclcpp::get_logger("sensor_sim"), "노드 실행 실패: %s", error.what());
+    exit_code = 1;
+  }
 
   // 3. 컨텍스트 정리
   rclcpp::shutdown();
-  return 0;
+  return exit_code;
 }
