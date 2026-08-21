@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!-- 링크와 조인트의 최소 예: 고정 받침 위에 회전 링크 하나 -->
+<robot name="two_link">
+
+  <!-- 1. 바닥에 고정된 받침 링크 -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.02" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.2 0.2 0.04"/>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- 2. 받침 위에서 도는 팔 링크 -->
+  <link name="arm_link">
+    <visual>
+      <origin xyz="0 0 0.15" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.03" length="0.3"/>
+      </geometry>
+      <material name="orange">
+        <color rgba="0.9 0.45 0.2 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- 3. 두 링크를 잇는 회전 조인트 -->
+  <joint name="shoulder_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+    <origin xyz="0 0 0.04" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
+  </joint>
+
+</robot>
