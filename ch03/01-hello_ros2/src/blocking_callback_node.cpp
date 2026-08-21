@@ -31,7 +31,7 @@ using namespace std::chrono_literals;
 namespace
 {
 
-enum class ExecutorMode
+enum class ExecutorMode : std::uint8_t
 {
   Single,
   MultiSameGroup,
