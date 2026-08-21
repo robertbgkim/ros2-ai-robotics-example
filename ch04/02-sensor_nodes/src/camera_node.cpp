@@ -92,12 +92,15 @@ int main(int argc, char * argv[])
   // 1. rclcpp 컨텍스트 초기화
   rclcpp::init(argc, argv);
 
-  // 2. 실행 인자에서 신뢰성 정책 결정(기본 best_effort)
-  std::vector<std::string> args = rclcpp::remove_ros_arguments(argc, argv);
-  const std::string reliability = (args.size() > 1) ? args[1] : "best_effort";
-
   int exit_code = 0;
   try {
+    // 2. ROS 인자를 제외한 신뢰성 정책 인자는 최대 하나만 허용
+    const std::vector<std::string> args = rclcpp::remove_ros_arguments(argc, argv);
+    if (args.size() > 2) {
+      throw std::invalid_argument("신뢰성 인자는 하나만 지정할 수 있습니다.");
+    }
+    const std::string reliability = (args.size() > 1) ? args[1] : "best_effort";
+
     // 3. 노드 실행
     rclcpp::spin(std::make_shared<CameraNode>(reliability));
   } catch (const std::exception & error) {
