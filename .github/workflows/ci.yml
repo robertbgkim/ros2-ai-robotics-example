@@ -1,17 +1,21 @@
-name: colcon build and test
+name: colcon quality gate
 
-# 예제 저장소 전체 패키지의 빌드·테스트
-# 실행 조건: main 푸시와 모든 PR
 on:
   push:
     branches: [main]
   pull_request:
 
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+permissions:
+  contents: read
 
-    # ROS 2 Lyrical Luth가 설치된 공식 컨테이너
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     container:
       image: ros:lyrical-ros-base
 
@@ -26,24 +30,32 @@ jobs:
         run: |
           apt-get update
           rosdep update
-          rosdep install --from-paths src --ignore-src --rosdistro lyrical -r -y
+          rosdep install \
+            --from-paths src \
+            --ignore-src \
+            --rosdistro lyrical \
+            -r -y
 
-      - name: 빌드
+      - name: C++17 엄격 경고 빌드
         shell: bash
         run: |
           source /opt/ros/lyrical/setup.bash
-          colcon build --symlink-install
+          colcon build \
+            --symlink-install \
+            --cmake-args \
+              -DCMAKE_COMPILE_WARNING_AS_ERROR=ON \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      - name: 테스트
+      - name: ament 린트와 테스트
         shell: bash
         run: |
           source /opt/ros/lyrical/setup.bash
           source install/setup.bash
+          export AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS=1
 
-          # colcon test가 실패해도 결과 요약까지 본 뒤에 판정
           test_status=0
           result_status=0
-          colcon test || test_status=$?
+          colcon test --event-handlers console_direct+ || test_status=$?
           colcon test-result --verbose || result_status=$?
 
           if [ "$test_status" -ne 0 ] || [ "$result_status" -ne 0 ]; then
