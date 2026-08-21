@@ -51,7 +51,9 @@ public:
     // 3. 온도 구독자와 파라미터 변경 콜백 생성
     subscription_ = this->create_subscription<sensor_msgs::msg::Temperature>(
       "/motor_temperature", 10,
-      [this](sensor_msgs::msg::Temperature::ConstSharedPtr msg) {on_temperature(msg);});
+      [this](const sensor_msgs::msg::Temperature::ConstSharedPtr & msg) {
+        on_temperature(msg);
+      });
     parameter_callback_ = this->add_on_set_parameters_callback(
       [this](const std::vector<rclcpp::Parameter> & parameters) {
         return on_set_parameters(parameters);
@@ -95,7 +97,7 @@ private:
     return result;
   }
 
-  void on_temperature(sensor_msgs::msg::Temperature::ConstSharedPtr msg)
+  void on_temperature(const sensor_msgs::msg::Temperature::ConstSharedPtr & msg)
   {
     // 1. 유한하지 않은 값은 받아들이지 않음
     if (!std::isfinite(msg->temperature)) {

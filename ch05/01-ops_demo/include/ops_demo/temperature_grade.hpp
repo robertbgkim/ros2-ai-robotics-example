@@ -16,12 +16,13 @@
 #define OPS_DEMO__TEMPERATURE_GRADE_HPP_
 
 #include <cmath>
+#include <cstdint>
 
 namespace ops_demo
 {
 
 // 온도 판정 등급
-enum class Grade
+enum class Grade : std::uint8_t
 {
   Ok,
   Warn,

@@ -73,7 +73,7 @@ private:
   void on_timer()
   {
     // 1. 기준 온도에서 서서히 오르는 값 계산
-    const double temperature = base_temperature_ + static_cast<double>(tick_) * 0.5;
+    const double temperature = base_temperature_ + (static_cast<double>(tick_) * 0.5);
 
     // 2. 온도 메시지 구성
     sensor_msgs::msg::Temperature msg;
