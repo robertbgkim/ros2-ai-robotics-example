@@ -10,9 +10,13 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+option(ROS2_EXAMPLE_WARNINGS_AS_ERRORS "Treat project warnings as errors" OFF)
 
 if(MSVC)
   set(PROJECT_WARNING_FLAGS /W4)
+  if(ROS2_EXAMPLE_WARNINGS_AS_ERRORS)
+    list(APPEND PROJECT_WARNING_FLAGS /WX)
+  endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set(PROJECT_WARNING_FLAGS
     -Wall
@@ -21,6 +25,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     -Wshadow
     -Wconversion
     -Wsign-conversion)
+  if(ROS2_EXAMPLE_WARNINGS_AS_ERRORS)
+    list(APPEND PROJECT_WARNING_FLAGS -Werror)
+  endif()
 endif()
 
 add_executable(pose_cycler src/pose_cycler.cpp)
