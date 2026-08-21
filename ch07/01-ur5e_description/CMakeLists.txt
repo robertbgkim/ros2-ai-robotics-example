@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 3.10)
+project(ur5e_description)
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
+add_executable(pose_cycler src/pose_cycler.cpp)
+target_link_libraries(pose_cycler PRIVATE
+  rclcpp::rclcpp
+  ${sensor_msgs_TARGETS})
+
+install(TARGETS
+  pose_cycler
+  DESTINATION lib/${PROJECT_NAME})
+
+install(DIRECTORY
+  urdf
+  launch
+  rviz
+  DESTINATION share/${PROJECT_NAME})
+
+if(BUILD_TESTING)
+  # SPDX 한 줄 표기를 쓰므로 라이선스 전문을 요구하는 copyright 린터는 제외
+  set(ament_cmake_copyright_FOUND TRUE)
+
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+ament_package()
