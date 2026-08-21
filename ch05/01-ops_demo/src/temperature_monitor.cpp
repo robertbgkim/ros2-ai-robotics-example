@@ -1,13 +1,24 @@
 // Copyright 2026 makepluscode
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <chrono>
 #include <cmath>
-#include <functional>
-#include <stdexcept>
-#include <vector>
+#include <exception>
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "diagnostic_updater/diagnostic_updater.hpp"
 #include "ops_demo/temperature_grade.hpp"
@@ -22,32 +33,34 @@ class TemperatureMonitor : public rclcpp::Node
 {
 public:
   TemperatureMonitor()
-  : Node("temperature_monitor"), last_temperature_(0.0), received_(false)
+  : Node("temperature_monitor")
   {
     // 1. 경고·오류 임계값 파라미터 선언
     this->declare_parameter<double>("warn_threshold", 55.0);
     this->declare_parameter<double>("error_threshold", 70.0);
 
-    // 2. 온도 구독자 생성
-    subscription_ = this->create_subscription<sensor_msgs::msg::Temperature>(
-        "/motor_temperature", 10,
-        std::bind(&TemperatureMonitor::on_temperature, this, std::placeholders::_1));
-
-    // 3. 파라미터 변경을 받아들이기 전에 검증
-    parameter_callback_ = this->add_on_set_parameters_callback(
-      std::bind(&TemperatureMonitor::on_set_parameters, this, std::placeholders::_1));
-
-    // 4. 초기 설정이 이미 잘못돼 있으면 즉시 중단
+    // 2. 초기 설정이 이미 잘못돼 있으면 리소스 생성 전에 중단
     if (!is_valid_pair(
         this->get_parameter("warn_threshold").as_double(),
         this->get_parameter("error_threshold").as_double()))
     {
       throw std::invalid_argument(
-        "warn_threshold는 error_threshold보다 작은 유한한 값이어야 합니다");
+              "warn_threshold는 error_threshold보다 작은 유한한 값이어야 합니다");
     }
 
-    // 5. 진단 갱신기 구성과 진단 항목 등록
-    updater_ = std::make_shared<diagnostic_updater::Updater>(this);
+    // 3. 온도 구독자와 파라미터 변경 콜백 생성
+    subscription_ = this->create_subscription<sensor_msgs::msg::Temperature>(
+      "/motor_temperature", 10,
+      [this](const sensor_msgs::msg::Temperature::ConstSharedPtr & msg) {
+        on_temperature(msg);
+      });
+    parameter_callback_ = this->add_on_set_parameters_callback(
+      [this](const std::vector<rclcpp::Parameter> & parameters) {
+        return on_set_parameters(parameters);
+      });
+
+    // 4. 진단 갱신기 구성과 진단 항목 등록
+    updater_ = std::make_unique<diagnostic_updater::Updater>(this);
     updater_->setHardwareID("motor_case");
     updater_->add("모터 온도", this, &TemperatureMonitor::diagnose);
 
@@ -84,7 +97,7 @@ private:
     return result;
   }
 
-  void on_temperature(const sensor_msgs::msg::Temperature::SharedPtr msg)
+  void on_temperature(const sensor_msgs::msg::Temperature::ConstSharedPtr & msg)
   {
     // 1. 유한하지 않은 값은 받아들이지 않음
     if (!std::isfinite(msg->temperature)) {
@@ -110,14 +123,14 @@ private:
     // 2. 아직 수신 전이면 판정 보류
     if (!received_) {
       status.summary(
-          diagnostic_msgs::msg::DiagnosticStatus::WARN, "온도 데이터 수신 전");
+        diagnostic_msgs::msg::DiagnosticStatus::WARN, "온도 데이터 수신 전");
       return;
     }
 
     // 3. 마지막 수신 이후 시간이 지나치게 벌어지면 단절로 판정
     if (std::chrono::steady_clock::now() - last_receive_time_ > 2s) {
       status.summary(
-          diagnostic_msgs::msg::DiagnosticStatus::ERROR, "온도 데이터 수신 중단");
+        diagnostic_msgs::msg::DiagnosticStatus::ERROR, "온도 데이터 수신 중단");
       status.add("마지막 온도", last_temperature_);
       return;
     }
@@ -133,6 +146,9 @@ private:
       case ops_demo::Grade::Ok:
         status.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "온도 정상");
         break;
+      case ops_demo::Grade::InvalidTemperature:
+        status.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "온도 입력 오류");
+        break;
       case ops_demo::Grade::InvalidThreshold:
         status.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "임계값 설정 오류");
         break;
@@ -145,11 +161,11 @@ private:
   }
 
   rclcpp::Subscription<sensor_msgs::msg::Temperature>::SharedPtr subscription_;
-  std::shared_ptr<diagnostic_updater::Updater> updater_;
+  std::unique_ptr<diagnostic_updater::Updater> updater_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_;
-  double last_temperature_;
+  double last_temperature_{0.0};
   std::chrono::steady_clock::time_point last_receive_time_;
-  bool received_;
+  bool received_{false};
 };
 
 int main(int argc, char * argv[])
@@ -157,10 +173,17 @@ int main(int argc, char * argv[])
   // 1. rclcpp 컨텍스트 초기화
   rclcpp::init(argc, argv);
 
-  // 2. 온도 감시 노드 실행
-  rclcpp::spin(std::make_shared<TemperatureMonitor>());
+  int exit_code = 0;
+  try {
+    // 2. 온도 감시 노드 실행
+    rclcpp::spin(std::make_shared<TemperatureMonitor>());
+  } catch (const std::exception & error) {
+    RCLCPP_FATAL(
+      rclcpp::get_logger("temperature_monitor"), "노드 실행 실패: %s", error.what());
+    exit_code = 1;
+  }
 
   // 3. 컨텍스트 정리
   rclcpp::shutdown();
-  return 0;
+  return exit_code;
 }

@@ -1,5 +1,12 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(robot_interfaces)
+
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+option(ROS2_EXAMPLE_WARNINGS_AS_ERRORS "Treat project warnings as errors" OFF)
 
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
@@ -10,9 +17,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "action/MoveJoint.action")
 
 if(BUILD_TESTING)
-  # SPDX 한 줄 표기를 쓰므로 라이선스 전문을 요구하는 copyright 린터는 제외
-  set(ament_cmake_copyright_FOUND TRUE)
-
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 endif()

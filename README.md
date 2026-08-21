@@ -6,7 +6,8 @@
 
 - Ubuntu 26.04 LTS
 - ROS 2 Lyrical Luth
-- C++17 이상
+- 자체 소스 최소 기준 C++17(확장 문법 비활성화)
+- ROS 2 Lyrical의 현재 rclcpp 전이 요구에 따라 ROS 대상의 실제 컴파일은 C++20
 - colcon과 ament_cmake
 
 ## 워크스페이스 구성
@@ -19,9 +20,41 @@ git clone https://github.com/makepluscode/ros2-ai-robotics-example
 cd ~/ros2_ws
 source /opt/ros/lyrical/setup.bash
 rosdep install --from-paths src --ignore-src --rosdistro lyrical -r -y
-colcon build --symlink-install
+colcon build --symlink-install \
+  --cmake-args -DROS2_EXAMPLE_WARNINGS_AS_ERRORS=ON
 source install/setup.bash
 ```
+
+## 에이전트·격리 작업 트리 검증
+
+Codex나 Claude Code가 Windows 작업 트리를 WSL에서 빌드할 때는 소스 안에 `build/`,
+`install/`, `log/`를 만들지 않습니다. `/mnt/<drive>/...`의 소스는 `--base-paths`로
+지정하고 결과는 WSL의 별도 디렉터리에 둡니다.
+
+```bash
+SOURCE=/mnt/e/ros2-ai-robotics-book/code
+BUILD_ROOT=~/ros2_agent_ws/example-quality
+
+mkdir -p "$BUILD_ROOT"
+cd "$BUILD_ROOT"
+source /opt/ros/lyrical/setup.bash
+export AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS=1
+
+colcon build --base-paths "$SOURCE" --symlink-install \
+  --cmake-args \
+    -DROS2_EXAMPLE_WARNINGS_AS_ERRORS=ON \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+source install/setup.bash
+colcon test --base-paths "$SOURCE" --event-handlers console_direct+
+colcon test-result --verbose
+```
+
+자체 소스는 C++17 문법 범위를 최소 기준으로 유지하고
+`-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion`을 사용합니다.
+Lyrical의 현재 rclcpp는 C++20 전이 요구를 내보내므로 ROS 대상의 실제 컴파일
+명령은 C++20으로 상향될 수 있습니다. CI는 자체 대상의 경고를 오류로 처리하고
+clang-tidy, copyright, cppcheck, cpplint, uncrustify, CMake/XML/Python 린트와 기능
+테스트를 모두 실행합니다.
 
 ## 디렉터리 이름 규칙
 
@@ -72,8 +105,9 @@ source install/setup.bash
 colcon test --packages-select comm_tests
 colcon test-result --test-result-base build/comm_tests --verbose
 
-ros2 run dds_benchmark latency_pong &
-ros2 run dds_benchmark latency_ping --ros-args -p sample_count:=2000
+RMW_IMPLEMENTATION=rmw_cyclonedds_cpp ros2 run dds_benchmark latency_pong &
+RMW_IMPLEMENTATION=rmw_cyclonedds_cpp ros2 run dds_benchmark latency_ping \
+  --ros-args -p sample_count:=2000
 ```
 
 ## 7장 예제 실행
@@ -81,7 +115,12 @@ ros2 run dds_benchmark latency_ping --ros-args -p sample_count:=2000
 `ur_description`이 필요합니다.
 
 ```bash
-sudo apt install -y ros-lyrical-xacro ros-lyrical-ur-description   ros-lyrical-joint-state-publisher ros-lyrical-joint-state-publisher-gui   ros-lyrical-tf2-tools
+sudo apt install -y \
+  ros-lyrical-xacro \
+  ros-lyrical-ur-description \
+  ros-lyrical-joint-state-publisher \
+  ros-lyrical-joint-state-publisher-gui \
+  ros-lyrical-tf2-tools
 
 cd ~/ros2_ws
 colcon build --symlink-install --packages-select ur5e_description
@@ -89,6 +128,13 @@ source install/setup.bash
 
 ros2 launch ur5e_description display.launch.py
 ros2 launch ur5e_description display.launch.py joint_state_source:=cycler rviz:=false
+```
+
+WSLg에서 RViz가 `Invalid parentWindowHandle`로 종료되면 소프트웨어 렌더링으로 실행합니다.
+
+```bash
+QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
+  ros2 launch ur5e_description display.launch.py
 ```
 
 ## 장별 구성
@@ -112,4 +158,5 @@ ros2 launch ur5e_description display.launch.py joint_state_source:=cycler rviz:=
 
 ## 라이선스
 
-각 ROS2 패키지의 `package.xml`에 선언된 라이선스를 따릅니다.
+저장소 전체는 `LICENSE`의 Apache License 2.0을 따르며, 각 ROS2 패키지의
+`package.xml`에도 같은 라이선스를 선언합니다.

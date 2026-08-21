@@ -1,0 +1,69 @@
+name: colcon quality gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: ros:lyrical-ros-base
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          path: src/ros2-ai-robotics-example
+
+      - name: 의존성 설치
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y clang-tidy
+          rosdep update
+          rosdep install \
+            --from-paths src \
+            --ignore-src \
+            --rosdistro lyrical \
+            -r -y
+
+      - name: Lyrical 엄격 경고 빌드
+        shell: bash
+        run: |
+          source /opt/ros/lyrical/setup.bash
+          colcon build \
+            --symlink-install \
+            --cmake-args \
+              -DROS2_EXAMPLE_WARNINGS_AS_ERRORS=ON \
+              -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: clang-tidy 정적 분석
+        shell: bash
+        run: |
+          src/ros2-ai-robotics-example/ci/run-clang-tidy.sh build
+
+      - name: ament 린트와 테스트
+        shell: bash
+        run: |
+          source /opt/ros/lyrical/setup.bash
+          source install/setup.bash
+          export AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS=1
+
+          test_status=0
+          result_status=0
+          colcon test --event-handlers console_direct+ || test_status=$?
+          colcon test-result --verbose || result_status=$?
+
+          if [ "$test_status" -ne 0 ] || [ "$result_status" -ne 0 ]; then
+            exit 1
+          fi

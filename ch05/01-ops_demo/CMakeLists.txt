@@ -1,8 +1,29 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 project(ops_demo)
 
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+option(ROS2_EXAMPLE_WARNINGS_AS_ERRORS "Treat project warnings as errors" OFF)
+
+if(MSVC)
+  set(PROJECT_WARNING_FLAGS /W4)
+  if(ROS2_EXAMPLE_WARNINGS_AS_ERRORS)
+    list(APPEND PROJECT_WARNING_FLAGS /WX)
+  endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set(PROJECT_WARNING_FLAGS
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wshadow
+    -Wconversion
+    -Wsign-conversion)
+  if(ROS2_EXAMPLE_WARNINGS_AS_ERRORS)
+    list(APPEND PROJECT_WARNING_FLAGS -Werror)
+  endif()
 endif()
 
 find_package(ament_cmake REQUIRED)
@@ -12,12 +33,14 @@ find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 
 add_executable(sensor_sim src/sensor_sim.cpp)
+target_compile_options(sensor_sim PRIVATE ${PROJECT_WARNING_FLAGS})
 target_link_libraries(sensor_sim PRIVATE
   rclcpp::rclcpp
   ${sensor_msgs_TARGETS})
 
 add_executable(temperature_monitor src/temperature_monitor.cpp)
 target_include_directories(temperature_monitor PRIVATE include)
+target_compile_options(temperature_monitor PRIVATE ${PROJECT_WARNING_FLAGS})
 target_link_libraries(temperature_monitor PRIVATE
   rclcpp::rclcpp
   ${sensor_msgs_TARGETS}
@@ -38,9 +61,6 @@ install(DIRECTORY include/
   DESTINATION include)
 
 if(BUILD_TESTING)
-  # SPDX 한 줄 표기를 쓰므로 라이선스 전문을 요구하는 copyright 린터는 제외
-  set(ament_cmake_copyright_FOUND TRUE)
-
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 
@@ -48,6 +68,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_temperature_grade test/test_temperature_grade.cpp)
   target_include_directories(test_temperature_grade PRIVATE include)
+  target_compile_options(test_temperature_grade PRIVATE ${PROJECT_WARNING_FLAGS})
 endif()
 
 ament_package()
