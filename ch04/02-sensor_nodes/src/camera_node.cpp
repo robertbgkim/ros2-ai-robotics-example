@@ -1,10 +1,21 @@
 // Copyright 2026 makepluscode
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
+#include <exception>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -21,7 +32,7 @@ class CameraNode : public rclcpp::Node
 {
 public:
   explicit CameraNode(const std::string & reliability)
-  : Node("camera_node"), frame_id_(0)
+  : Node("camera_node")
   {
     // 1. 센서 스트림 기본값인 best_effort QoS 구성
     rclcpp::QoS qos = rclcpp::SensorDataQoS();
@@ -40,7 +51,7 @@ public:
     publisher_ = this->create_publisher<sensor_msgs::msg::Image>("/camera/image_raw", qos);
 
     // 5. 약 30Hz에 해당하는 33ms 주기 타이머 등록
-    timer_ = this->create_wall_timer(33ms, std::bind(&CameraNode::on_timer, this));
+    timer_ = this->create_wall_timer(33ms, [this]() {on_timer();});
 
     RCLCPP_INFO(
         this->get_logger(), "카메라 노드 시작 (신뢰성=%s, 깊이=5)", reliability.c_str());
@@ -57,21 +68,21 @@ private:
     msg.width = 4;
     msg.encoding = "mono8";
     msg.step = msg.width;
-    msg.data.assign(msg.height * msg.step, static_cast<uint8_t>(frame_id_ % 256));
+    msg.data.assign(msg.height * msg.step, static_cast<uint8_t>(frame_count_ % 256U));
 
     // 2. 발행 후 프레임 번호 누적
     publisher_->publish(msg);
-    frame_id_++;
+    ++frame_count_;
 
     // 3. 30프레임마다 한 번만 진행 상황 출력
-    if (frame_id_ % 30 == 0) {
-      RCLCPP_INFO(this->get_logger(), "프레임 %zu 발행", frame_id_);
+    if (frame_count_ % 30U == 0U) {
+      RCLCPP_INFO(this->get_logger(), "프레임 %zu 발행", frame_count_);
     }
   }
 
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
-  std::size_t frame_id_;
+  std::size_t frame_count_{0};
 };
 
 int main(int argc, char * argv[])
@@ -83,10 +94,17 @@ int main(int argc, char * argv[])
   std::vector<std::string> args = rclcpp::remove_ros_arguments(argc, argv);
   const std::string reliability = (args.size() > 1) ? args[1] : "best_effort";
 
-  // 3. 노드 실행
-  rclcpp::spin(std::make_shared<CameraNode>(reliability));
+  int exit_code = 0;
+  try {
+    // 3. 노드 실행
+    rclcpp::spin(std::make_shared<CameraNode>(reliability));
+  } catch (const std::exception & error) {
+    RCLCPP_FATAL(
+      rclcpp::get_logger("camera_node"), "노드 실행 실패: %s", error.what());
+    exit_code = 1;
+  }
 
   // 4. 컨텍스트 정리
   rclcpp::shutdown();
-  return 0;
+  return exit_code;
 }
