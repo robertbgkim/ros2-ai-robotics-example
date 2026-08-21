@@ -1,10 +1,10 @@
 // Copyright 2026 makepluscode
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef COMM_TESTS__TEMPERATURE_GRADE_HPP_
-#define COMM_TESTS__TEMPERATURE_GRADE_HPP_
+#ifndef OPS_DEMO__TEMPERATURE_GRADE_HPP_
+#define OPS_DEMO__TEMPERATURE_GRADE_HPP_
 
-namespace comm_tests
+namespace ops_demo
 {
 
 // 온도 판정 등급
@@ -35,6 +35,6 @@ inline Grade grade_temperature(double temperature, double warn, double error)
   return Grade::Ok;
 }
 
-}  // namespace comm_tests
+}  // namespace ops_demo
 
-#endif  // COMM_TESTS__TEMPERATURE_GRADE_HPP_
+#endif  // OPS_DEMO__TEMPERATURE_GRADE_HPP_

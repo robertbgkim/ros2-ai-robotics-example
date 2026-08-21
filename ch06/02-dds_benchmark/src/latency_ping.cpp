@@ -3,10 +3,12 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
@@ -22,9 +24,13 @@ public:
   LatencyPing()
   : Node("latency_ping")
   {
-    // 1. 측정 횟수 파라미터 선언
+    // 1. 측정 횟수 파라미터 선언과 범위 검사
     this->declare_parameter<int>("sample_count", 1000);
-    sample_count_ = static_cast<std::size_t>(this->get_parameter("sample_count").as_int());
+    const int64_t requested = this->get_parameter("sample_count").as_int();
+    if (requested <= 0) {
+      throw std::invalid_argument("sample_count는 1 이상이어야 합니다");
+    }
+    sample_count_ = static_cast<std::size_t>(requested);
     samples_.reserve(sample_count_);
 
     // 2. 반환 노드와 같은 QoS 구성
@@ -90,14 +96,16 @@ private:
     }
     const double mean = sum / static_cast<double>(samples_.size());
 
-    // 3. 대표 통계 출력
+    // 3. 99번째 백분위수를 nearest-rank 방식으로 선택
+    const double rank = std::ceil(static_cast<double>(samples_.size()) * 0.99);
+    const std::size_t p99_index = static_cast<std::size_t>(rank) - 1;
+
+    // 4. 대표 통계 출력
     RCLCPP_INFO(
         this->get_logger(),
         "RMW=%s 표본=%zu 평균=%.1fus 중앙값=%.1fus p99=%.1fus 최대=%.1fus",
         rmw_get_implementation_identifier(), samples_.size(), mean,
-        samples_[samples_.size() / 2],
-        samples_[static_cast<std::size_t>(static_cast<double>(samples_.size()) * 0.99)],
-        samples_.back());
+        samples_[samples_.size() / 2], samples_[p99_index], samples_.back());
   }
 
   rclcpp::Publisher<std_msgs::msg::UInt64>::SharedPtr publisher_;

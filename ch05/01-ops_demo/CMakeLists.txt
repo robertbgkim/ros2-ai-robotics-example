@@ -17,6 +17,7 @@ target_link_libraries(sensor_sim PRIVATE
   ${sensor_msgs_TARGETS})
 
 add_executable(temperature_monitor src/temperature_monitor.cpp)
+target_include_directories(temperature_monitor PRIVATE include)
 target_link_libraries(temperature_monitor PRIVATE
   rclcpp::rclcpp
   ${sensor_msgs_TARGETS}
@@ -33,12 +34,20 @@ install(DIRECTORY
   config
   DESTINATION share/${PROJECT_NAME})
 
+install(DIRECTORY include/
+  DESTINATION include)
+
 if(BUILD_TESTING)
   # SPDX 한 줄 표기를 쓰므로 라이선스 전문을 요구하는 copyright 린터는 제외
   set(ament_cmake_copyright_FOUND TRUE)
 
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
+
+  # 온도 판정 순수 함수 단위 테스트 — temperature_monitor가 쓰는 바로 그 함수
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_temperature_grade test/test_temperature_grade.cpp)
+  target_include_directories(test_temperature_grade PRIVATE include)
 endif()
 
 ament_package()
