@@ -1,8 +1,19 @@
 // Copyright 2026 makepluscode
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <chrono>
-#include <functional>
+#include <cstddef>
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"
@@ -13,25 +24,24 @@ class TimerNode : public rclcpp::Node
 {
 public:
   TimerNode()
-  : Node("timer_node"), count_(0)
+  : Node("timer_node")
   {
     // 1. 500ms 주기 타이머 콜백 등록
-    timer_ = this->create_wall_timer(
-        500ms, std::bind(&TimerNode::on_timer, this));
+    timer_ = this->create_wall_timer(500ms, [this]() {on_timer();});
   }
 
 private:
   void on_timer()
   {
     // 1. 호출 횟수 누적
-    count_++;
+    ++count_;
 
     // 2. 콜백 실행 로그 출력
     RCLCPP_INFO(this->get_logger(), "타이머 콜백 실행 #%zu", count_);
   }
 
   rclcpp::TimerBase::SharedPtr timer_;
-  size_t count_;
+  std::size_t count_{0};
 };
 
 int main(int argc, char * argv[])
