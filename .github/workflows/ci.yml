@@ -29,6 +29,7 @@ jobs:
         shell: bash
         run: |
           apt-get update
+          apt-get install -y clang-tidy
           rosdep update
           rosdep install \
             --from-paths src \
@@ -36,15 +37,20 @@ jobs:
             --rosdistro lyrical \
             -r -y
 
-      - name: C++17 엄격 경고 빌드
+      - name: Lyrical 엄격 경고 빌드
         shell: bash
         run: |
           source /opt/ros/lyrical/setup.bash
           colcon build \
             --symlink-install \
             --cmake-args \
-              -DCMAKE_COMPILE_WARNING_AS_ERROR=ON \
+              -DROS2_EXAMPLE_WARNINGS_AS_ERRORS=ON \
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: clang-tidy 정적 분석
+        shell: bash
+        run: |
+          src/ros2-ai-robotics-example/ci/run-clang-tidy.sh build
 
       - name: ament 린트와 테스트
         shell: bash

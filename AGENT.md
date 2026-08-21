@@ -67,9 +67,10 @@ code/
 
 ## 11. C++ 품질 기준
 
-- 모든 자체 C++ 대상은 C++17 필수, 컴파일러 확장 문법 비활성화
+- 모든 자체 소스는 C++17 문법 범위를 최소 기준으로 유지하고 컴파일러 확장 문법 비활성화
+- ROS 2 Lyrical의 현재 rclcpp 전이 요구 때문에 ROS 대상의 실제 컴파일 명령은 C++20으로 상향될 수 있음
 - GCC/Clang 경고: `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion`
-- 최종 검증과 CI에서는 `CMAKE_COMPILE_WARNING_AS_ERROR=ON`으로 경고를 오류 처리
+- 최종 검증과 CI에서는 `ROS2_EXAMPLE_WARNINGS_AS_ERRORS=ON`으로 자체 대상 경고를 오류 처리
 - 소유하지 않은 ROS 생성 코드나 외부 헤더에는 저장소 경고 옵션을 강제로 적용하지 않음
 - 읽기 전용 메시지 콜백은 `ConstSharedPtr`, 짧은 콜백 연결은 람다 우선
 - 파라미터는 리소스 생성 전에 유한성·범위·관계 검증
@@ -92,7 +93,7 @@ export AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS=1
 
 colcon build --base-paths "$SOURCE" --symlink-install \
   --cmake-args \
-    -DCMAKE_COMPILE_WARNING_AS_ERROR=ON \
+    -DROS2_EXAMPLE_WARNINGS_AS_ERRORS=ON \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 source install/setup.bash
 colcon test --base-paths "$SOURCE" --event-handlers console_direct+

@@ -6,7 +6,8 @@
 
 - Ubuntu 26.04 LTS
 - ROS 2 Lyrical Luth
-- C++17(확장 문법 비활성화)
+- 자체 소스 최소 기준 C++17(확장 문법 비활성화)
+- ROS 2 Lyrical의 현재 rclcpp 전이 요구에 따라 ROS 대상의 실제 컴파일은 C++20
 - colcon과 ament_cmake
 
 ## 워크스페이스 구성
@@ -20,7 +21,7 @@ cd ~/ros2_ws
 source /opt/ros/lyrical/setup.bash
 rosdep install --from-paths src --ignore-src --rosdistro lyrical -r -y
 colcon build --symlink-install \
-  --cmake-args -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+  --cmake-args -DROS2_EXAMPLE_WARNINGS_AS_ERRORS=ON
 source install/setup.bash
 ```
 
@@ -41,16 +42,19 @@ export AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS=1
 
 colcon build --base-paths "$SOURCE" --symlink-install \
   --cmake-args \
-    -DCMAKE_COMPILE_WARNING_AS_ERROR=ON \
+    -DROS2_EXAMPLE_WARNINGS_AS_ERRORS=ON \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 source install/setup.bash
 colcon test --base-paths "$SOURCE" --event-handlers console_direct+
 colcon test-result --verbose
 ```
 
-각 C++ 대상은 C++17과 `-Wall -Wextra -Wpedantic -Wshadow -Wconversion
--Wsign-conversion`을 사용합니다. CI는 경고를 오류로 처리하고 copyright, cppcheck,
-cpplint, uncrustify, CMake/XML/Python 린트와 기능 테스트를 모두 실행합니다.
+자체 소스는 C++17 문법 범위를 최소 기준으로 유지하고
+`-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion`을 사용합니다.
+Lyrical의 현재 rclcpp는 C++20 전이 요구를 내보내므로 ROS 대상의 실제 컴파일
+명령은 C++20으로 상향될 수 있습니다. CI는 자체 대상의 경고를 오류로 처리하고
+clang-tidy, copyright, cppcheck, cpplint, uncrustify, CMake/XML/Python 린트와 기능
+테스트를 모두 실행합니다.
 
 ## 디렉터리 이름 규칙
 
