@@ -7,7 +7,10 @@ Checks: >
   portability-*,
   readability-*,
   -bugprone-easily-swappable-parameters,
+  -bugprone-reserved-identifier,
   -modernize-use-trailing-return-type,
+  -modernize-use-ranges,
+  -portability-template-virtual-member-function,
   -readability-function-cognitive-complexity,
   -readability-identifier-length,
   -readability-magic-numbers
