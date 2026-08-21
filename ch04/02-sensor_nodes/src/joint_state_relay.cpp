@@ -37,7 +37,9 @@ public:
     // 2. 관절 상태 구독(센서 스트림이므로 best_effort)
     subscription_ = this->create_subscription<sensor_msgs::msg::JointState>(
         "/joint_states", rclcpp::SensorDataQoS(),
-      [this](sensor_msgs::msg::JointState::ConstSharedPtr msg) {on_joint_state(msg);});
+      [this](const sensor_msgs::msg::JointState::ConstSharedPtr & msg) {
+        on_joint_state(msg);
+      });
 
     // 3. 목표 명령 발행자 생성
     publisher_ = this->create_publisher<robot_interfaces::msg::JointCommand>(
@@ -47,8 +49,8 @@ public:
     service_ = this->create_service<robot_interfaces::srv::SetGripper>(
         "/set_gripper",
       [this](
-        const std::shared_ptr<robot_interfaces::srv::SetGripper::Request> request,
-        std::shared_ptr<robot_interfaces::srv::SetGripper::Response> response)
+        const std::shared_ptr<robot_interfaces::srv::SetGripper::Request> & request,
+        const std::shared_ptr<robot_interfaces::srv::SetGripper::Response> & response)
       {
         on_set_gripper(request, response);
       });
@@ -57,7 +59,7 @@ public:
   }
 
 private:
-  void on_joint_state(sensor_msgs::msg::JointState::ConstSharedPtr msg)
+  void on_joint_state(const sensor_msgs::msg::JointState::ConstSharedPtr & msg)
   {
     // 1. 이름이 비어 있는 메시지는 무시
     if (msg->name.empty() || msg->name.front().empty() || msg->position.empty()) {
@@ -86,8 +88,8 @@ private:
   }
 
   void on_set_gripper(
-    const std::shared_ptr<robot_interfaces::srv::SetGripper::Request> request,
-    std::shared_ptr<robot_interfaces::srv::SetGripper::Response> response)
+    const std::shared_ptr<robot_interfaces::srv::SetGripper::Request> & request,
+    const std::shared_ptr<robot_interfaces::srv::SetGripper::Response> & response)
   {
     // 1. 물리적으로 가능한 범위 검사
     //    NaN은 모든 비교가 거짓이므로 유한성부터 확인

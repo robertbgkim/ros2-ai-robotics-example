@@ -68,7 +68,9 @@ private:
     msg.width = 4;
     msg.encoding = "mono8";
     msg.step = msg.width;
-    msg.data.assign(msg.height * msg.step, static_cast<uint8_t>(frame_count_ % 256U));
+    const std::size_t pixel_count =
+      static_cast<std::size_t>(msg.height) * static_cast<std::size_t>(msg.step);
+    msg.data.assign(pixel_count, static_cast<uint8_t>(frame_count_ % 256U));
 
     // 2. 발행 후 프레임 번호 누적
     publisher_->publish(msg);
